@@ -249,6 +249,8 @@ class StorageActions extends StatelessWidget {
             try {
               final result = await storageFile.read();
               _logger.fine('read: {$result}');
+              final List<BiometricType> list = await BiometricStorage().getAvailableBiometrics();
+              _logger.fine('read: {$list}');
             } on AuthException catch (e) {
               if (e.code == AuthExceptionCode.userCanceled) {
                 _logger.info('User canceled.');

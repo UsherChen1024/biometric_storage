@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:logging/logging.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+import 'biometric_type.dart';
 
 final _logger = Logger('biometric_storage');
 
@@ -206,6 +209,9 @@ abstract class BiometricStorage extends PlatformInterface {
   /// the reason [CanAuthenticateResponse] why it is not supported.
   Future<CanAuthenticateResponse> canAuthenticate();
 
+
+  Future<List<BiometricType>> getAvailableBiometrics();
+
   /// Returns true when there is an AppArmor error when trying to read a value.
   ///
   /// When used inside a snap, there might be app armor limitations
@@ -275,6 +281,40 @@ class MethodChannelBiometricStorage extends BiometricStorage {
       return ret;
     }
     return CanAuthenticateResponse.unsupported;
+  }
+
+  @override
+  Future<List<BiometricType>> getAvailableBiometrics() async {
+    final result = await _channel.invokeListMethod<String>(
+      'getAvailableBiometrics',
+    ) ?? [] ;
+    _logger.finer('availables = $result');
+
+    final List<BiometricType> biometrics = <BiometricType>[];
+    for (final String value in result) {
+      switch (value) {
+        case 'face':
+          biometrics.add(BiometricType.face);
+          break;
+        case 'fingerprint':
+          biometrics.add(BiometricType.fingerprint);
+          break;
+        case 'iris':
+          biometrics.add(BiometricType.iris);
+          break;
+        case 'weak':
+          biometrics.add(BiometricType.weak);
+          break;
+        case 'strong':
+          biometrics.add(BiometricType.strong);
+          break;
+        case 'undefined':
+        // Sentinel value for the case when nothing is enrolled, but hardware
+        // support for biometrics is available.
+          break;
+      }
+    }
+    return biometrics;
   }
 
   /// Returns true when there is an AppArmor error when trying to read a value.

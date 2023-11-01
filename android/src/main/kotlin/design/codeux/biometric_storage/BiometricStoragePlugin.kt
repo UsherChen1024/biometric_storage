@@ -207,6 +207,9 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
             when (call.method) {
                 "canAuthenticate" -> result.success(canAuthenticate().name)
+                "getAvailableBiometrics" -> {
+                    result.success(getEnrolledBiometrics())
+                }
                 "init" -> {
                     val name = getName()
                     if (storageFiles.containsKey(name)) {
@@ -335,6 +338,19 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                         .contentToString()
                 }"
             )
+    }
+
+    private fun getEnrolledBiometrics(): List<String>{
+        val biometrics: ArrayList<String> = ArrayList()
+        if (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)
+                === BiometricManager.BIOMETRIC_SUCCESS) {
+            biometrics.add("weak")
+        }
+        if (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+                === BiometricManager.BIOMETRIC_SUCCESS) {
+            biometrics.add("strong")
+        }
+        return biometrics
     }
 
     @UiThread

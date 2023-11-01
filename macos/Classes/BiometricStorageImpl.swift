@@ -115,6 +115,8 @@ class BiometricStorageImpl {
           }
         }
       }
+    } else if ("getAvailableBiometrics" == call.method) {
+        result([getEnrolledBiometrics()])
     } else {
       result(storageMethodNotImplemented)
     }
@@ -150,6 +152,31 @@ class BiometricStorageImpl {
       break;
     }
   }
+
+  private func getEnrolledBiometrics() -> String {
+      let authContent = LAContext()
+              var error: NSError?
+              if authContent.canEvaluatePolicy(
+              .deviceOwnerAuthenticationWithBiometrics,
+              error: &error) {
+                  //iPhoneX出厂最低系统版本号：iOS11.0.0
+                  if #available(iOS 11.0, *) {
+                      if authContent.biometryType == .faceID {
+                          return "face"
+                      }else if authContent.biometryType == .touchID {
+                          return "fingerprint"
+                      }
+                  } else {
+                      guard let laError = error as? LAError else{
+                          return ""
+                      }
+                      if laError.code != .touchIDNotAvailable {
+                          return "fingerprint"
+                      }
+                  }
+              }
+               return ""
+    }
 }
 
 class BiometricStorageFile {

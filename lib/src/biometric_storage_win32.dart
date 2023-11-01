@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'dart:typed_data';
 
+import 'package:biometric_storage/src/biometric_type.dart';
 import 'package:ffi/ffi.dart';
 import 'package:logging/logging.dart';
 import 'package:win32/win32.dart';
@@ -130,5 +131,11 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
       calloc.free(userNamePointer);
       _logger.fine('free done');
     }
+  }
+
+  @override
+  Future<List<BiometricType>> getAvailableBiometrics() {
+    // TODO: implement getAvailableBiometrics
+    throw UnimplementedError();
   }
 }

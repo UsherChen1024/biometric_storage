@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:html' as html show window;
 
 import 'package:biometric_storage/src/biometric_storage.dart';
+import 'package:biometric_storage/src/biometric_type.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
 /// A web implementation of the BiometricStorage plugin.
@@ -58,5 +59,11 @@ class BiometricStoragePluginWeb extends BiometricStorage {
     PromptInfo promptInfo,
   ) async {
     html.window.localStorage[name] = content;
+  }
+
+  @override
+  Future<List<BiometricType>> getAvailableBiometrics() {
+    // TODO: implement getAvailableBiometrics
+    throw UnimplementedError();
   }
 }
