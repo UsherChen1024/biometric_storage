@@ -1,9 +1,9 @@
-name: biometric_storage
+name: joy_biometric_storage
 description: |
   Secure Storage: Encrypted data store optionally secured by biometric lock with support
   for iOS, Android, MacOS. Partial support for Linux, Windows and web (localStorage).
-version: 5.0.1-dev.1
-homepage: https://github.com/authpass/biometric_storage/
+version: 0.0.1
+homepage: https://github.com/UsherChen1024/biometric_storage
 
 environment:
   sdk: '>=2.17.0 <4.0.0'
