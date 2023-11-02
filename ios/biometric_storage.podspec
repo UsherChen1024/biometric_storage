@@ -3,7 +3,7 @@
 # Run `pod lib lint biometric_storage.podspec' to validate before publishing.
 #
 Pod::Spec.new do |s|
-  s.name             = 'biometric_storage'
+  s.name             = 'joy_biometric_storage'
   s.version          = '0.0.1'
   s.summary          = 'A new flutter plugin project.'
   s.description      = <<-DESC
