@@ -7,7 +7,7 @@ environment:
   sdk: '>=2.15.0-259.16.beta <3.0.0'
 
 dependencies:
-  biometric_storage:
+  joy_biometric_storage:
     path: ../
   flutter:
     sdk: flutter

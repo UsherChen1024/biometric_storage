@@ -1,5 +1,5 @@
 #import "BiometricStoragePlugin.h"
-#import <biometric_storage/biometric_storage-Swift.h>
+#import <joy_biometric_storage/joy_biometric_storage-Swift.h>
 
 @implementation BiometricStoragePlugin
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {

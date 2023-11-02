@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:biometric_storage/biometric_storage.dart';
+import 'package:joy_biometric_storage/biometric_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
@@ -252,6 +252,8 @@ class StorageActions extends StatelessWidget {
               final List<BiometricType> list = await BiometricStorage().getAvailableBiometrics();
               _logger.fine('read: {$list}');
             } on AuthException catch (e) {
+              _logger.info('e.code == ${e.code}');
+
               if (e.code == AuthExceptionCode.userCanceled) {
                 _logger.info('User canceled.');
                 return;
