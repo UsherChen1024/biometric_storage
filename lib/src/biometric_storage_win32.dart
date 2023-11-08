@@ -138,4 +138,23 @@ class Win32BiometricStoragePlugin extends BiometricStorage {
     // TODO: implement getAvailableBiometrics
     throw UnimplementedError();
   }
+
+  @override
+  Future<void> testRead() {
+    // TODO: implement testRead
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> testWrite(
+      {String? token, String? fallTitle, String? reasonTitle}) {
+    // TODO: implement testWrite
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> testDelete() {
+    // TODO: implement testDelete
+    throw UnimplementedError();
+  }
 }

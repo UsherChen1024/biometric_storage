@@ -106,50 +106,71 @@ class MyAppState extends State<MyApp> {
         body: Column(
           children: [
             const Text('Methods:'),
-            ElevatedButton(
-              child: const Text('init'),
-              onPressed: () async {
-                _logger.finer('Initializing $baseName');
-                final authenticate = await _checkAuthenticate();
-                if (authenticate == CanAuthenticateResponse.unsupported) {
-                  _logger.severe(
-                      'Unable to use authenticate. Unable to get storage.');
-                  return;
-                }
-                final supportsAuthenticated =
-                    authenticate == CanAuthenticateResponse.success ||
-                        authenticate == CanAuthenticateResponse.statusUnknown;
-                if (supportsAuthenticated) {
-                  _authStorage = await BiometricStorage().getStorage(
-                      '${baseName}_authenticated',
-                      options: StorageFileInitOptions());
-                }
-                _storage = await BiometricStorage()
-                    .getStorage('${baseName}_unauthenticated',
-                        options: StorageFileInitOptions(
-                          authenticationRequired: false,
-                        ));
-                if (supportsAuthenticated) {
-                  _customPrompt = await BiometricStorage().getStorage(
-                      '${baseName}_customPrompt',
-                      options: StorageFileInitOptions(
-                          authenticationValidityDurationSeconds: 5),
-                      promptInfo: const PromptInfo(
-                        iosPromptInfo: IosPromptInfo(
-                          saveTitle: 'Custom save title',
-                          accessTitle: 'Custom access title.',
-                        ),
-                        androidPromptInfo: AndroidPromptInfo(
-                          title: 'Custom title',
-                          subtitle: 'Custom subtitle',
-                          description: 'Custom description',
-                          negativeButton: 'Nope!',
-                        ),
-                      ));
-                }
-                setState(() {});
-                _logger.info('initiailzed $baseName');
-              },
+            Row(
+              children: [
+                ElevatedButton(
+                  child: const Text('read'),//init
+                  onPressed: () async {
+                    await BiometricStorage().testRead();
+                    // _logger.finer('main回调：$map');
+                    return;
+                    _logger.finer('Initializing $baseName');
+                    final authenticate = await _checkAuthenticate();
+                    if (authenticate == CanAuthenticateResponse.unsupported) {
+                      _logger.severe(
+                          'Unable to use authenticate. Unable to get storage.');
+                      return;
+                    }
+                    final supportsAuthenticated =
+                        authenticate == CanAuthenticateResponse.success ||
+                            authenticate == CanAuthenticateResponse.statusUnknown;
+                    if (supportsAuthenticated) {
+                      _authStorage = await BiometricStorage().getStorage(
+                          '${baseName}_authenticated',
+                          options: StorageFileInitOptions());
+                    }
+                    _storage = await BiometricStorage()
+                        .getStorage('${baseName}_unauthenticated',
+                            options: StorageFileInitOptions(
+                              authenticationRequired: false,
+                            ));
+                    if (supportsAuthenticated) {
+                      _customPrompt = await BiometricStorage().getStorage(
+                          '${baseName}_customPrompt',
+                          options: StorageFileInitOptions(
+                              authenticationValidityDurationSeconds: 5),
+                          promptInfo: const PromptInfo(
+                            iosPromptInfo: IosPromptInfo(
+                              saveTitle: 'Custom save title',
+                              accessTitle: 'Custom access title.',
+                            ),
+                            androidPromptInfo: AndroidPromptInfo(
+                              title: 'Custom title',
+                              subtitle: 'Custom subtitle',
+                              description: 'Custom description',
+                              negativeButton: 'Nope!',
+                            ),
+                          ));
+                    }
+                    setState(() {});
+                    _logger.info('initiailzed $baseName');
+                  },
+                ),
+                const SizedBox(width: 80,),
+                ElevatedButton(
+                  child: const Text('write'),
+                  onPressed: () async {
+                    await BiometricStorage().testWrite(token: '612412414');
+                  },
+                ),
+                const SizedBox(width: 80,),
+                ElevatedButton(
+                  child: const Text('delete'),
+                  onPressed: () async {
+                    await BiometricStorage().testDelete();
+                  },
+                ),
+              ],
             ),
             ...?_appArmorButton(),
             ...(_authStorage == null
@@ -246,10 +267,14 @@ class StorageActions extends StatelessWidget {
           child: const Text('read'),
           onPressed: () async {
             _logger.fine('reading from ${storageFile.name}');
+            BiometricStorage().testRead();
+            _logger.fine('test: OCtest');
+            return;
             try {
               final result = await storageFile.read();
               _logger.fine('read: {$result}');
-              final List<BiometricType> list = await BiometricStorage().getAvailableBiometrics();
+              final List<BiometricType> list =
+                  await BiometricStorage().getAvailableBiometrics();
               _logger.fine('read: {$list}');
             } on AuthException catch (e) {
               _logger.info('e.code == ${e.code}');

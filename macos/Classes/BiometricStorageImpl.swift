@@ -117,6 +117,8 @@ class BiometricStorageImpl {
       }
     } else if ("getAvailableBiometrics" == call.method) {
         result([getEnrolledBiometrics()])
+    } else if ("testFlutter" == call.method) {
+        result([])
     } else {
       result(storageMethodNotImplemented)
     }

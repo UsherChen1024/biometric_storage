@@ -3,7 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
-  biometric_storage
+  joy_biometric_storage
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

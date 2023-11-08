@@ -209,8 +209,14 @@ abstract class BiometricStorage extends PlatformInterface {
   /// the reason [CanAuthenticateResponse] why it is not supported.
   Future<CanAuthenticateResponse> canAuthenticate();
 
-
   Future<List<BiometricType>> getAvailableBiometrics();
+
+  Future<void> testWrite(
+      {String token, String? fallTitle, String? reasonTitle});
+
+  Future<void> testRead();
+
+  Future<void> testDelete();
 
   /// Returns true when there is an AppArmor error when trying to read a value.
   ///
@@ -286,8 +292,9 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   @override
   Future<List<BiometricType>> getAvailableBiometrics() async {
     final result = await _channel.invokeListMethod<String>(
-      'getAvailableBiometrics',
-    ) ?? [] ;
+          'getAvailableBiometrics',
+        ) ??
+        [];
     _logger.finer('availables = $result');
 
     final List<BiometricType> biometrics = <BiometricType>[];
@@ -309,12 +316,37 @@ class MethodChannelBiometricStorage extends BiometricStorage {
           biometrics.add(BiometricType.strong);
           break;
         case 'undefined':
-        // Sentinel value for the case when nothing is enrolled, but hardware
-        // support for biometrics is available.
+          // Sentinel value for the case when nothing is enrolled, but hardware
+          // support for biometrics is available.
           break;
       }
     }
     return biometrics;
+  }
+
+  @override
+  Future<void> testWrite({
+      String? token, String? fallTitle, String? reasonTitle}) async {
+    final result = await _channel.invokeMethod('testWrite', {
+          'token': token ?? '111',
+          'fallbackTitle': fallTitle ?? '密码支付',
+          'reasonTitle': reasonTitle ?? '使用生物支付哈哈哈哈'
+        }) ??
+        {};
+    _logger.finer('testWrite--result回调：$result');
+    // return result;
+  }
+
+  @override
+  Future<void> testRead() async {
+    final result = await _channel.invokeMethod('testRead') ?? {};
+    _logger.finer('testRead --result回调：$result');
+  }
+
+  @override
+  Future<void> testDelete() async {
+    final result = await _channel.invokeMethod('testDelete') ?? {};
+    _logger.finer('testDelete --result回调：$result');
   }
 
   /// Returns true when there is an AppArmor error when trying to read a value.
