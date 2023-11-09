@@ -68,20 +68,19 @@ class BiometricStoragePluginWeb extends BiometricStorage {
   }
 
   @override
-  Future<void> testWrite(
-      {String? token, String? fallTitle, String? reasonTitle}) {
+  Future<void> testWrite(String name, String content, PromptInfo promptInfo) {
     // TODO: implement testWrite
     throw UnimplementedError();
   }
 
   @override
-  Future<void> testRead() {
+  Future<void> testRead(String name, PromptInfo promptInfo) {
     // TODO: implement testRead
     throw UnimplementedError();
   }
 
   @override
-  Future<void> testDelete() {
+  Future<void> testDelete(String name, PromptInfo promptInfo) {
     // TODO: implement testDelete
     throw UnimplementedError();
   }

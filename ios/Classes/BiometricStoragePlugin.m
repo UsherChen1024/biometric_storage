@@ -15,14 +15,17 @@
     if (argDic == nil || argDic.allKeys.count == 0) {
         argDic = @{};
     }
-    NSString *token = argDic[@"token"];
     
-    if ([call.method isEqualToString:@"testWrite"]) {
-      [BiometricStorageImp write:token completed:result];
-    } else if ([call.method isEqualToString:@"testRead"]) {
-      [BiometricStorageImp readCompleted:result];
-    } else if ([call.method isEqualToString:@"testDelete"]) {
-      [BiometricStorageImp deleteCompleted:result];
+    if ([call.method isEqualToString:@"canAuthenticate"]) {
+        [BiometricStorageImp canAuthenticateCompleted:result];
+    } else if ([call.method isEqualToString:@"getAvailableBiometrics"]) {
+        [BiometricStorageImp getAvailableBiometricsCompleted:result];
+    } else if ([call.method isEqualToString:@"write"]) {
+        [BiometricStorageImp write:argDic completed:result];
+    } else if ([call.method isEqualToString:@"read"]) {
+        [BiometricStorageImp read:argDic completed:result];
+    } else if ([call.method isEqualToString:@"delete"]) {
+        [BiometricStorageImp delete:argDic completed:result];
     }
 }
 
