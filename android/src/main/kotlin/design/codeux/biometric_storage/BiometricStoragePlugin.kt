@@ -2,8 +2,10 @@ package design.codeux.biometric_storage
 
 import android.app.Activity
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.*
 import android.security.keystore.KeyPermanentlyInvalidatedException
+import android.security.keystore.KeyProperties
 import android.security.keystore.UserNotAuthenticatedException
 import androidx.annotation.AnyThread
 import androidx.annotation.UiThread
@@ -17,6 +19,8 @@ import io.flutter.plugin.common.*
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.io.File
+import java.io.IOException
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.concurrent.ExecutorService
@@ -24,6 +28,56 @@ import java.util.concurrent.Executors
 import javax.crypto.Cipher
 
 private val logger = KotlinLogging.logger {}
+
+/// 设备生物特征识别错误码
+object JdtCode {
+    /// 未录入指纹
+    val TouchIDNotEnrolled = 1
+
+    /// 未录入面容
+    val FaceIDNotEnrolled = 2
+
+    /// 未录入生物信息
+    val NotEnrolled = 3
+
+    /// 验证设备密码以解锁指纹
+    val TouchIDLockout = 4
+
+    /// 验证设备密码以解锁面容
+    val FaceIDLockout = 5
+
+    /// 验证设备密码以解锁
+    val Lockout = 6
+
+    /// 指纹发生变更
+    val TouchIDChange = 7
+
+    /// 面容发生变更
+    val FaceIDChange = 8
+
+    /// 用户点击取消
+    val UserCancel = 9
+
+    /// 未设置密码
+    val PasscodeNotSet = 10
+
+    /// 用户在设置里关闭了面容、指纹
+    val Closed = 11
+
+    //保存token的文件丢失, 生物识别失效
+    val FileNotExist = 12
+
+    val TimeOut = 13    //超时
+
+    /// 未知错误
+    val UnKnow = 99
+
+    /// KeyChain错误
+    val KeyChain = 100
+
+    val JDT_SUCCESS = 10000
+}
+
 
 enum class CipherMode {
     Encrypt,
@@ -71,12 +125,12 @@ enum class AuthenticationError(vararg val code: Int) {
 }
 
 data class AuthenticationErrorInfo(
-    val error: AuthenticationError,
+    val error: Int,
     val message: CharSequence,
     val errorDetails: String? = null
 ) {
     constructor(
-        error: AuthenticationError,
+        error: Int,
         message: CharSequence,
         e: Throwable
     ) : this(error, message, e.toCompleteString())
@@ -97,6 +151,27 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         const val PARAM_WRITE_CONTENT = "content"
         const val PARAM_ANDROID_PROMPT_INFO = "androidPromptInfo"
 
+        private const val DIRECTORY_NAME = "biometric_storage"
+        private const val FILE_SUFFIX_V2 = ".v2.txt"
+    }
+
+    private val cryptographyManager = CryptographyManager {
+        setUserAuthenticationRequired(true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val useStrongBox = applicationContext.packageManager.hasSystemFeature(
+                PackageManager.FEATURE_STRONGBOX_KEYSTORE
+            )
+            setIsStrongBoxBacked(useStrongBox)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            setUserAuthenticationParameters(
+                0,
+                KeyProperties.AUTH_BIOMETRIC_STRONG
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            setUserAuthenticationValidityDurationSeconds(-1)
+        }
     }
 
     private val executor: ExecutorService by lazy { Executors.newSingleThreadExecutor() }
@@ -154,6 +229,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             }
 
             val resultError: ErrorCallback = { errorInfo ->
+
                 result.error(
                     "AuthError:${errorInfo.error}",
                     errorInfo.message.toString(),
@@ -210,33 +286,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 "getAvailableBiometrics" -> {
                     result.success(getEnrolledBiometrics())
                 }
-                "init" -> {
-                    val name = getName()
-                    if (storageFiles.containsKey(name)) {
-                        if (call.argument<Boolean>("forceInit") == true) {
-                            throw MethodCallException(
-                                "AlreadyInitialized",
-                                "A storage file with the name '$name' was already initialized."
-                            )
-                        } else {
-                            result.success(false)
-                            return
-                        }
-                    }
 
-                    val options = call.argument<Map<String, Any>>("options")?.let { it ->
-                        InitOptions(
-                            authenticationValidityDurationSeconds = it["authenticationValidityDurationSeconds"] as Int,
-                            authenticationRequired = it["authenticationRequired"] as Boolean,
-                            androidBiometricOnly = it["androidBiometricOnly"] as Boolean,
-                        )
-                    } ?: InitOptions()
-//                    val options = moshi.adapter(InitOptions::class.java)
-//                        .fromJsonValue(call.argument("options") ?: emptyMap<String, Any>())
-//                        ?: InitOptions()
-                    storageFiles[name] = BiometricStorageFile(applicationContext, name, options)
-                    result.success(true)
-                }
                 "dispose" -> storageFiles.remove(getName())?.apply {
                     dispose()
                     result.success(true)
@@ -245,31 +295,106 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     "Tried to dispose non existing storage.",
                     null
                 )
-                "read" -> withStorage {
-                    if (exists()) {
-                        withAuth(CipherMode.Decrypt) {
-                            val ret = readFile(
-                                    it,
-                                )
-                            ui(resultError) { result.success(ret) }
+
+                "read" -> {
+                    val fileName = getName()
+                    val masterKeyName = getMasterKeyName(fileName)
+                    val fileV2 = getFileV2(fileName)
+
+                    if (fileV2.exists()) {
+                        val cipher = try {
+                            cipherForDecrypt(masterKeyName, fileV2)
+                        } catch (e: KeyPermanentlyInvalidatedException) {
+                            logger.warn(e) { "Key was invalidated. removing previous storage and recreating." }
+                            deleteFile(masterKeyName, fileV2)
+                            // if deleting fails, simply throw the second time around.
+                            cipherForDecrypt(masterKeyName, fileV2)
                         }
+
+                        val cb = {
+                            val ret = readFile(cipher, masterKeyName, fileV2)
+                            ui(resultError) {
+                                result.success(
+                                    wrapResult(
+                                        JdtCode.JDT_SUCCESS,
+                                        ret!!
+                                    )
+                                )
+                            }
+                        }
+
+                        if (cipher == null) {
+                            // if we have no cipher, just try the callback and see if the
+                            // user requires authentication.
+                            try {
+                                cb()
+                                return
+                            } catch (e: UserNotAuthenticatedException) {
+                                logger.debug(e) { "User requires (re)authentication. showing prompt ..." }
+                            }
+                        }
+
+                        val promptInfo = getAndroidPromptInfo()
+                        authenticate(cipher, promptInfo, InitOptions(), {
+                            cb()
+                        }, onError = resultError)
+
                     } else {
-                        result.success(null)
+                        result.success(wrapResult(JdtCode.FileNotExist))
                     }
+
                 }
-                "delete" -> withStorage {
-                    if (exists()) {
-                        result.success(deleteFile())
-                    } else {
-                        result.success(false)
+
+                "delete" -> {
+                    val fileName = getName()
+                    val masterKeyName = getMasterKeyName(fileName)
+                    val fileV2 = getFileV2(fileName)
+
+                    if (fileV2.exists()) {
+                        val isSuccess = deleteFile(masterKeyName, fileV2)
                     }
+                    result.success(wrapResult(JdtCode.JDT_SUCCESS))
                 }
-                "write" -> withStorage {
-                    withAuth(CipherMode.Encrypt) {
-                        writeFile(it, requiredArgument(PARAM_WRITE_CONTENT))
-                        ui(resultError) { result.success(true) }
+
+                "write" -> {
+                    val fileName = getName()
+                    val masterKeyName = getMasterKeyName(fileName)
+                    val fileV2 = getFileV2(fileName)
+
+                    val cipher = try {
+                        cipherForEncrypt(masterKeyName)
+                    } catch (e: KeyPermanentlyInvalidatedException) {
+                        logger.warn(e) { "Key was invalidated. removing previous storage and recreating." }
+                        deleteFile(masterKeyName, fileV2)
+                        // if deleting fails, simply throw the second time around.
+                        cipherForEncrypt(masterKeyName)
                     }
+
+                    val cb = {
+                        writeFile(cipher, requiredArgument<String>(PARAM_WRITE_CONTENT), masterKeyName, fileV2)
+                        ui(resultError) { result.success(wrapResult(
+                            JdtCode.JDT_SUCCESS
+                        )) }
+                    }
+
+                    if (cipher == null) {
+                        // if we have no cipher, just try the callback and see if the
+                        // user requires authentication.
+                        try {
+                            cb()
+                            return
+                        } catch (e: UserNotAuthenticatedException) {
+                            logger.debug(e) { "User requires (re)authentication. showing prompt ..." }
+                        }
+                    }
+
+                    val promptInfo = getAndroidPromptInfo()
+                    authenticate(cipher, promptInfo, InitOptions(), {
+                        cb()
+                    }, onError = resultError)
+
                 }
+
                 else -> result.notImplemented()
             }
         } catch (e: MethodCallException) {
@@ -278,6 +403,75 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
         } catch (e: Exception) {
             logger.error(e) { "Error while processing method call '${call.method}'" }
             result.error("Unexpected Error", e.message, e.toCompleteString())
+        }
+    }
+
+    private fun getFileV2(fileName: String): File {
+        val fileNameV2 = "$fileName${FILE_SUFFIX_V2}"
+
+        val baseDir = File(applicationContext.filesDir, DIRECTORY_NAME)
+        if (!baseDir.exists()) {
+            baseDir.mkdirs()
+        }
+
+        return File(baseDir, fileNameV2)
+    }
+
+    private fun getMasterKeyName(fileName: String): String {
+        return "${fileName}_master_key"
+    }
+
+    fun cipherForEncrypt(masterKeyName: String) =
+        cryptographyManager.getInitializedCipherForEncryption(masterKeyName)
+
+    fun cipherForDecrypt(masterKeyName: String, fileV2: File): Cipher? {
+        if (fileV2.exists()) {
+            return cryptographyManager.getInitializedCipherForDecryption(masterKeyName, fileV2)
+        }
+        logger.debug { "No file exists, no IV found. null cipher." }
+        return null
+    }
+
+    @Synchronized
+    fun deleteFile(masterKeyName: String, fileV2: File): Boolean {
+        cryptographyManager.deleteKey(masterKeyName)
+        return fileV2.delete()
+    }
+
+    @Synchronized
+    fun readFile(cipher: Cipher?, masterKeyName: String, fileV2: File): String? {
+        val useCipher = cipher ?: cipherForDecrypt(masterKeyName, fileV2)
+        // if the file exists, there should *always* be a decryption key.
+        if (useCipher != null && fileV2.exists()) {
+            return try {
+                val bytes = fileV2.readBytes()
+                logger.debug { "read ${bytes.size}" }
+                cryptographyManager.decryptData(bytes, useCipher)
+            } catch (ex: IOException) {
+                logger.error(ex) { "Error while writing encrypted file $fileV2" }
+                null
+            }
+        }
+
+        logger.debug { "File $fileV2 does not exist. returning null." }
+        return null
+
+    }
+
+    @Synchronized
+    fun writeFile(cipher: Cipher?, content: String, masterKeyName: String, fileV2: File) {
+        // cipher will be null if user does not need authentication or valid period is > -1
+        val useCipher = cipher ?: cipherForEncrypt(masterKeyName)
+        try {
+            val encrypted = cryptographyManager.encryptData(content, useCipher)
+            fileV2.writeBytes(encrypted.encryptedPayload)
+            logger.debug { "Successfully written ${encrypted.encryptedPayload.size} bytes." }
+
+            return
+        } catch (ex: IOException) {
+            // Error occurred opening file for writing.
+            logger.error(ex) { "Error while writing encrypted file $fileV2" }
+            throw ex
         }
     }
 
@@ -292,7 +486,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             logger.error(e) { "Error while calling UI callback. This must not happen." }
             onError(
                 AuthenticationErrorInfo(
-                    AuthenticationError.Unknown,
+                    JdtCode.UnKnow,
                     "Unexpected authentication error. ${e.localizedMessage}",
                     e
                 )
@@ -311,7 +505,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             handler.post {
                 onError(
                     AuthenticationErrorInfo(
-                        AuthenticationError.Unknown,
+                        JdtCode.UnKnow,
                         "Unexpected authentication error. ${e.localizedMessage}",
                         e
                     )
@@ -340,14 +534,16 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             )
     }
 
-    private fun getEnrolledBiometrics(): List<String>{
+    private fun getEnrolledBiometrics(): List<String> {
         val biometrics: ArrayList<String> = ArrayList()
         if (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK)
-                === BiometricManager.BIOMETRIC_SUCCESS) {
+            === BiometricManager.BIOMETRIC_SUCCESS
+        ) {
             biometrics.add("weak")
         }
         if (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
-                === BiometricManager.BIOMETRIC_SUCCESS) {
+            === BiometricManager.BIOMETRIC_SUCCESS
+        ) {
             biometrics.add("strong")
         }
         return biometrics
@@ -366,7 +562,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             logger.error { "We are not attached to an activity." }
             onError(
                 AuthenticationErrorInfo(
-                    AuthenticationError.Failed,
+                    JdtCode.UnKnow,
                     "Plugin not attached to any activity."
                 )
             )
@@ -375,12 +571,16 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             BiometricPrompt(activity, executor, object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     logger.trace("onAuthenticationError($errorCode, $errString)")
+                    val jdtErrorCode = when (errorCode) {
+                        BiometricPrompt.ERROR_CANCELED, BiometricPrompt.ERROR_USER_CANCELED, BiometricPrompt.ERROR_NEGATIVE_BUTTON -> JdtCode.UserCancel
+                        BiometricPrompt.ERROR_TIMEOUT -> JdtCode.TimeOut
+                        BiometricPrompt.ERROR_NO_BIOMETRICS -> JdtCode.NotEnrolled
+                        else -> JdtCode.UnKnow
+                    }
                     ui(onError) {
                         onError(
                             AuthenticationErrorInfo(
-                                AuthenticationError.forCode(
-                                    errorCode
-                                ), errString
+                                jdtErrorCode, errString
                             )
                         )
                     }
@@ -453,6 +653,14 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
 
     override fun onDetachedFromActivityForConfigChanges() {
     }
+}
+
+fun wrapResult(code: Int, data: String = ""): Map<String, Any> {
+    return mapOf(
+        Pair("errorCode", code),
+        Pair("data", data),
+        Pair("succeed", if (code == JdtCode.JDT_SUCCESS) 1 else 0)
+    )
 }
 
 data class AndroidPromptInfo(

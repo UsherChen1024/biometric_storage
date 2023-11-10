@@ -35,6 +35,12 @@ enum BiometricErrorCode {
   /// 未知错误
   errorUnKnow,
 
+  ///生物识别失效
+  fileNotExist,
+
+  ///超时
+  timeOut,
+
   /// KeyChain错误
   errorKeyChain
 }

@@ -495,34 +495,34 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   //     }));
 
   @override
-  Future<void> write(String name, String content, PromptInfo promptInfo) async {
+  Future<BiometricResponse> write(String name, String content, PromptInfo promptInfo) async {
     final result = await _channel.invokeMethod('write', <String, dynamic>{
       'name': name,
       'content': content,
       ..._promptInfoForCurrentPlatform(promptInfo),
     });
-    _handleResult(result);
     _logger.finer('testWrite--result回调:$result');
+    return _handleResult(result);
   }
 
   @override
-  Future<void> read(String name, PromptInfo promptInfo) async {
+  Future<BiometricResponse> read(String name, PromptInfo promptInfo) async {
     final result = await _channel.invokeMethod('read', <String, dynamic>{
       'name': name,
       ..._promptInfoForCurrentPlatform(promptInfo),
     });
-    _handleResult(result);
     _logger.finer('testRead--result回调:$result');
+    return _handleResult(result);
   }
 
   @override
-  Future<void> delete(String name, PromptInfo promptInfo) async {
+  Future<BiometricResponse> delete(String name, PromptInfo promptInfo) async {
     final result = await _channel.invokeMethod('delete', <String, dynamic>{
       'name': name,
       ..._promptInfoForCurrentPlatform(promptInfo),
     });
-    _handleResult(result);
     _logger.finer('testDelete--result回调:$result');
+    return _handleResult(result);
   }
 
   BiometricResponse _handleResult(dynamic response) {
@@ -554,6 +554,10 @@ class MethodChannelBiometricStorage extends BiometricStorage {
         errorCode = BiometricErrorCode.passcodeNotSet;
       } else if (code == 11) {
         errorCode = BiometricErrorCode.biometricClosed;
+      } else if (code == 12) {
+        errorCode = BiometricErrorCode.fileNotExist;
+      } else if (code == 13) {
+        errorCode = BiometricErrorCode.timeOut;
       } else if (code == 100) {
         errorCode = BiometricErrorCode.errorKeyChain;
       }
