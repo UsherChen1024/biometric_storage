@@ -272,11 +272,11 @@ abstract class BiometricStorage extends PlatformInterface {
   //   PromptInfo promptInfo,
   // );
 
-  Future<void> write(String name, String content, PromptInfo promptInfo);
+  Future<BiometricResponse> write(String name, String content, PromptInfo promptInfo);
 
-  Future<void> read(String name, PromptInfo promptInfo);
+  Future<BiometricResponse> read(String name, PromptInfo promptInfo);
 
-  Future<void> delete(String name, PromptInfo promptInfo);
+  Future<BiometricResponse> delete(String name, PromptInfo promptInfo);
 }
 
 class MethodChannelBiometricStorage extends BiometricStorage {
