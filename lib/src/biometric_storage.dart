@@ -526,49 +526,42 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   }
 
   BiometricResponse _handleResult(dynamic response) {
-    if (Platform.isIOS) {
-      final Map<Object?, Object?> result = response as Map<Object?, Object?>;
-      final int code = result['errorCode'] as int;
-      final bool success = result['succeed'] == 1 ? true : false;
-      final String? dataStr = result['data'] as String;
-      var errorCode = BiometricErrorCode.errorUnKnow;
-      if (code == 1) {
-        errorCode = BiometricErrorCode.touchIDNotEnrolled;
-      } else if (code == 2) {
-        errorCode = BiometricErrorCode.faceIDNotEnrolled;
-      } else if (code == 3) {
-        errorCode = BiometricErrorCode.biometricNotEnrolled;
-      } else if (code == 4) {
-        errorCode = BiometricErrorCode.touchIDLockout;
-      } else if (code == 5) {
-        errorCode = BiometricErrorCode.faceIDLockout;
-      } else if (code == 6) {
-        errorCode = BiometricErrorCode.biometricLockout;
-      } else if (code == 7) {
-        errorCode = BiometricErrorCode.touchIDChange;
-      } else if (code == 8) {
-        errorCode = BiometricErrorCode.faceIDChange;
-      } else if (code == 9) {
-        errorCode = BiometricErrorCode.userCancel;
-      } else if (code == 10) {
-        errorCode = BiometricErrorCode.passcodeNotSet;
-      } else if (code == 11) {
-        errorCode = BiometricErrorCode.biometricClosed;
-      } else if (code == 12) {
-        errorCode = BiometricErrorCode.fileNotExist;
-      } else if (code == 13) {
-        errorCode = BiometricErrorCode.timeOut;
-      } else if (code == 100) {
-        errorCode = BiometricErrorCode.errorKeyChain;
-      }
-      return BiometricResponse(
-          success: success, errorCode: errorCode, data: dataStr);
+    final Map<Object?, Object?> result = response as Map<Object?, Object?>;
+    final int code = result['errorCode'] as int;
+    final bool success = result['succeed'] == 1 ? true : false;
+    final String? dataStr = result['data'] as String;
+    var errorCode = BiometricErrorCode.errorUnKnow;
+    if (code == 1) {
+      errorCode = BiometricErrorCode.touchIDNotEnrolled;
+    } else if (code == 2) {
+      errorCode = BiometricErrorCode.faceIDNotEnrolled;
+    } else if (code == 3) {
+      errorCode = BiometricErrorCode.biometricNotEnrolled;
+    } else if (code == 4) {
+      errorCode = BiometricErrorCode.touchIDLockout;
+    } else if (code == 5) {
+      errorCode = BiometricErrorCode.faceIDLockout;
+    } else if (code == 6) {
+      errorCode = BiometricErrorCode.biometricLockout;
+    } else if (code == 7) {
+      errorCode = BiometricErrorCode.touchIDChange;
+    } else if (code == 8) {
+      errorCode = BiometricErrorCode.faceIDChange;
+    } else if (code == 9) {
+      errorCode = BiometricErrorCode.userCancel;
+    } else if (code == 10) {
+      errorCode = BiometricErrorCode.passcodeNotSet;
+    } else if (code == 11) {
+      errorCode = BiometricErrorCode.biometricClosed;
+    } else if (code == 12) {
+      errorCode = BiometricErrorCode.fileNotExist;
+    } else if (code == 13) {
+      errorCode = BiometricErrorCode.timeOut;
+    } else if (code == 100) {
+      errorCode = BiometricErrorCode.errorKeyChain;
     }
-    ///TODO: 安卓处理返回转换
-    return const BiometricResponse(
-      success: false,
-      errorCode: BiometricErrorCode.errorUnKnow,
-    );
+    return BiometricResponse(
+        success: success, errorCode: errorCode, data: dataStr);
   }
 
   Map<String, dynamic> _promptInfoForCurrentPlatform(PromptInfo promptInfo) {
