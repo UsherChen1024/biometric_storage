@@ -41,6 +41,9 @@ enum BiometricErrorCode {
   ///超时
   timeOut,
 
+  ///android生物识别信息变更
+  biometricChange,
+
   /// KeyChain错误
   errorKeyChain
 }

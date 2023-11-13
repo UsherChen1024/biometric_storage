@@ -557,6 +557,8 @@ class MethodChannelBiometricStorage extends BiometricStorage {
       errorCode = BiometricErrorCode.fileNotExist;
     } else if (code == 13) {
       errorCode = BiometricErrorCode.timeOut;
+    } else if (code == 14) {
+      errorCode = BiometricErrorCode.biometricChange;
     } else if (code == 100) {
       errorCode = BiometricErrorCode.errorKeyChain;
     }

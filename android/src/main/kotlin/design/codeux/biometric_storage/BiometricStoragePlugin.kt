@@ -69,6 +69,9 @@ object JdtCode {
 
     val TimeOut = 13    //超时
 
+    //生物识别信息发生变更
+    val BiometricChange = 14
+
     /// 未知错误
     val UnKnow = 99
 
@@ -308,7 +311,11 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                             logger.warn(e) { "Key was invalidated. removing previous storage and recreating." }
                             deleteFile(masterKeyName, fileV2)
                             // if deleting fails, simply throw the second time around.
-                            cipherForDecrypt(masterKeyName, fileV2)
+                            //key失效，证明生物识别信息变更。
+                            result.success(wrapResult(
+                                    JdtCode.BiometricChange,
+                            ))
+                            return;
                         }
 
                         val cb = {
@@ -488,7 +495,6 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                 AuthenticationErrorInfo(
                     JdtCode.UnKnow,
                     "Unexpected authentication error. ${e.localizedMessage}",
-                    e
                 )
             )
         }
@@ -507,7 +513,6 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                     AuthenticationErrorInfo(
                         JdtCode.UnKnow,
                         "Unexpected authentication error. ${e.localizedMessage}",
-                        e
                     )
                 )
             }
