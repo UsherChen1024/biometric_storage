@@ -232,11 +232,10 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
             }
 
             val resultError: ErrorCallback = { errorInfo ->
-
-                result.error(
-                    "AuthError:${errorInfo.error}",
-                    errorInfo.message.toString(),
-                    errorInfo.errorDetails
+                result.success(
+                        wrapResult(
+                                errorInfo.error,
+                        )
                 )
                 logger.error("AuthError: $errorInfo")
 
@@ -580,6 +579,7 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
                         BiometricPrompt.ERROR_CANCELED, BiometricPrompt.ERROR_USER_CANCELED, BiometricPrompt.ERROR_NEGATIVE_BUTTON -> JdtCode.UserCancel
                         BiometricPrompt.ERROR_TIMEOUT -> JdtCode.TimeOut
                         BiometricPrompt.ERROR_NO_BIOMETRICS -> JdtCode.NotEnrolled
+                        BiometricPrompt.ERROR_LOCKOUT, BiometricPrompt.ERROR_LOCKOUT_PERMANENT -> JdtCode.Lockout
                         else -> JdtCode.UnKnow
                     }
                     ui(onError) {
