@@ -528,7 +528,7 @@ class MethodChannelBiometricStorage extends BiometricStorage {
   BiometricResponse _handleResult(dynamic response) {
     final Map<Object?, Object?> result = response as Map<Object?, Object?>;
     final int code = result['errorCode'] as int;
-    final bool success = result['succeed'] == 1 ? true : false;
+    final bool success = (result['succeed'] ?? false) as bool;
     final String? dataStr = result['data'] as String;
     var errorCode = BiometricErrorCode.errorUnKnow;
     if (code == 1) {

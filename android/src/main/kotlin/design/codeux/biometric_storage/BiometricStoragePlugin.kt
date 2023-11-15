@@ -664,7 +664,7 @@ fun wrapResult(code: Int, data: String = ""): Map<String, Any> {
     return mapOf(
         Pair("errorCode", code),
         Pair("data", data),
-        Pair("succeed", if (code == JdtCode.JDT_SUCCESS) 1 else 0)
+        Pair("succeed", (code == JdtCode.JDT_SUCCESS))
     )
 }
 
