@@ -519,14 +519,14 @@ class BiometricStoragePlugin : FlutterPlugin, ActivityAware, MethodCallHandler {
     }
 
     private fun canAuthenticate(): CanAuthenticateResponse {
-        val credentialsResponse = biometricManager.canAuthenticate(DEVICE_CREDENTIAL);
-        logger.debug { "canAuthenticate for DEVICE_CREDENTIAL: $credentialsResponse" }
-        if (credentialsResponse == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) {
-            return CanAuthenticateResponse.Success
-        }
+//        val credentialsResponse = biometricManager.canAuthenticate(DEVICE_CREDENTIAL);
+//        logger.debug { "canAuthenticate for DEVICE_CREDENTIAL: $credentialsResponse" }
+//        if (credentialsResponse == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED) {
+//            return CanAuthenticateResponse.Success
+//        }
 
         val response = biometricManager.canAuthenticate(
-            BIOMETRIC_STRONG or BIOMETRIC_WEAK
+            BIOMETRIC_STRONG
         )
         return CanAuthenticateResponse.values().firstOrNull { it.code == response }
             ?: throw Exception(
